@@ -93,7 +93,7 @@ public class ReplaceableThemeFactory
     }
 }
 
-public class ObjectTrackingFactory
+public class ObjectTrackingFactoryResult
 {
     public void Result01()
     {

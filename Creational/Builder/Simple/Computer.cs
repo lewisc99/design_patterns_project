@@ -115,7 +115,7 @@ public class ComputerManufacter
 
 
 
-public class BuilderResult
+public class BuilderSimpleResult
 {
     public void Result01()
     {
