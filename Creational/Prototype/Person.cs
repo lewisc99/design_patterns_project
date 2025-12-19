@@ -145,3 +145,84 @@ namespace CopyConstruction
         }
     }
 }
+
+
+namespace DeepCopying
+{
+    public interface IDeepCopyable<out T>
+    {
+        T DeepCopy();
+    }
+
+    public class Address : IDeepCopyable<Address>
+    {
+        public string StreetName { get; }
+        public int HouseNumber { get; }
+
+        public Address(string streetName, int houseNumber)
+        {
+            StreetName = streetName;
+            HouseNumber = houseNumber;
+        }
+
+        public Address(Address other)
+        {
+            StreetName = other.StreetName;
+            HouseNumber = other.HouseNumber;
+        }
+
+        public Address DeepCopy()
+        {
+            return new Address(this);
+        }
+    }
+
+    public class Person : IDeepCopyable<Person>
+    {
+        public string[] Names { get; }
+        public Address Address { get; }
+
+        public Person(string[] names, Address address)
+        {
+            Names = (string[])names.Clone();
+            Address = address.DeepCopy();
+        }
+
+        // Copy constructor
+        public Person(Person other)
+        {
+            Names = (string[])other.Names.Clone();
+            Address = other.Address.DeepCopy();
+        }
+
+        public virtual Person DeepCopy()
+        {
+            return new Person(this);
+        }
+    }
+
+    public class Employee : Person
+    {
+        public int Salary { get; }
+
+        public Employee(string[] names, Address address, int salary)
+            : base(names, address)
+        {
+            Salary = salary;
+        }
+    }
+
+    public class DeepCopyResult
+    {
+        public void Result()
+        {
+            var john = new Employee(
+                new[] { "John", "Smith" },
+                new Address("London Road", 123),
+                10000);
+
+            Person copy = john.DeepCopy();
+            Console.WriteLine(copy is Employee); // false
+        }
+    }
+}
