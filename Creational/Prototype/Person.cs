@@ -145,6 +145,15 @@ namespace CopyConstruction
             Console.WriteLine(jane);
         }
     }
+
+    public static class Prototype04Result
+    {
+        static void Result()
+        {
+            List<int> items = new() { 1, 2, 3 };
+            List<int> replica = new(items); // copy constructor
+        }
+    }
 }
 
 namespace DeepCopying
@@ -300,6 +309,36 @@ namespace DeepCopying
             copy.Address = john.Address.DeepCopy();
             Console.WriteLine(copy);
         }
+
+        public void Result03()
+        {
+
+            // Dictionary Deep Copy.
+
+            var people = new Dictionary<string, Address>
+            {
+                ["John"] = new("London Road", 38),
+                ["Jane"] = new("Jane Street", 72)
+            };
+
+            var peopleCopies = people.ToDictionary(
+                x => x.Key,
+                x => x.Value.DeepCopy());
+        }
+
+        public void Result04()
+        {
+            // Array or HashSet using LINQ deep copy
+            var addresses = new HashSet<Address>
+            {
+                new("London Road", 38),
+                new("Jane Street",72)
+            };
+
+            var replicas = new HashSet<Address>(
+                addresses.Select(a => a.DeepCopy()));
+        }
+
     }
 }
 
