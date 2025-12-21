@@ -147,7 +147,6 @@ namespace CopyConstruction
     }
 }
 
-
 namespace DeepCopying
 {
 
@@ -302,4 +301,129 @@ namespace DeepCopying
             Console.WriteLine(copy);
         }
     }
+}
+
+namespace ArrayDeepCopy
+{
+    public interface IDeepCopyable<T> where T : new()
+    {
+        void CopyTo(T target);
+
+        public T DeepCopy()
+        {
+            T t = new T();
+            CopyTo(t);
+            return t;
+        }
+    }
+
+    public static class Extension
+    {
+        public static T DeepCopy<T>(this IDeepCopyable<T> item)
+      where T : new()
+        {
+            return item.DeepCopy();
+        }
+    }
+
+    public class Address : IDeepCopyable<Address>
+    {
+        public string StreetName { get; set; }
+        public int HouseNumber { get; set; }
+
+        public Address() { }
+      
+        public Address(string streetName, int houseNumber)
+        {
+            StreetName = streetName;
+            HouseNumber = houseNumber;
+        }
+
+        public Address(Address other)
+        {
+            StreetName = other.StreetName;
+            HouseNumber = other.HouseNumber;
+        }
+
+        public void CopyTo(Address target)
+        {
+            target.StreetName = StreetName;
+            target.HouseNumber = HouseNumber;
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(StreetName)}: {StreetName}, {nameof(HouseNumber)}: {HouseNumber}";
+        }
+    }
+
+    public class Person
+    {
+        public string[] Names;
+        public Address[] Addresses;
+
+        public Person(string[] names, Address[] addresses)
+        {
+            Names = (string[])names.Clone();
+            Addresses = addresses;
+        }
+
+        public Person() { }
+
+        public Person DeepCopy()
+        {
+            var copy = new Person();
+            copy.Names = (string[])Names.Clone();
+            copy.Addresses = Array.ConvertAll(Addresses, a => a.DeepCopy());
+
+            return copy;
+        }
+    }
+
+    public class ArrayDeepCopy
+    {
+        public void Result()
+        {
+            var p1 = new Person(
+                             new[] { "Felipe", "Amanda" },
+                             new[]
+                             {
+                                new Address { HouseNumber = 123, StreetName = "London Road" },
+                                new Address { HouseNumber = 327, StreetName = "Cafezeiro" }
+                             });
+
+            var p2 = p1.DeepCopy();
+
+            PrintNames(p1, p2);
+            PrintAddresses(p1, p2);
+
+            p2.Addresses = new[]
+            {
+                new Address { HouseNumber = 223, StreetName = "London Road 2" },
+                new Address { HouseNumber = 427, StreetName = "Cafezeiro 2" }
+            };
+
+            PrintNames(p1, p2);
+            PrintAddresses(p1, p2);
+
+            static void PrintNames(Person p1, Person p2)
+            {
+                for (var i = 0; i < p1.Names.Length; i++)
+                {
+                    Console.WriteLine(p1.Names[i]);
+                    Console.WriteLine(p2.Names[i]);
+                }
+            }
+
+            static void PrintAddresses(Person p1, Person p2)
+            {
+                for (var i = 0; i < p1.Addresses.Length; i++)
+                {
+                    Console.WriteLine(p1.Addresses[i]);
+                    Console.WriteLine(p2.Addresses[i]);
+                }
+            }
+        }
+    }
+
 }
