@@ -466,3 +466,73 @@ namespace ArrayDeepCopy
     }
 
 }
+
+namespace MemberwiseCloneIsNotTerrible
+{
+    public interface IDeepCopyable<T>
+    {
+        T DeepCopy();
+    }
+
+    // Abstract base class for trivial deep copy using MemberwiseClone
+    public abstract class TriviallyCopyable<T> : IDeepCopyable<T>
+        where T : class
+    {
+        public T DeepCopy()
+        {
+            return (T)MemberwiseClone();
+        }
+    }
+
+    // Example: Person class using TriviallyCopyable
+    public class Person : TriviallyCopyable<Person>
+    {
+        public string Name { get; set; }
+        public int Age { get; set; }
+
+        public Person() { }
+
+        public Person(string name, int age)
+        {
+            Name = name;
+            Age = age;
+        }
+
+        public override string ToString()
+        {
+            return $"{Name}, Age: {Age}";
+        }
+    }
+
+    // Example: record type PersonRecord
+    public record PersonRecord(string Name, int Age)
+    {
+        public PersonRecord DeepCopy()
+        {
+            return this with { };
+            // or: return new PersonRecord(this);
+        }
+    }
+
+    // Example usage and result
+    public static class MemberwiseCloneDemo
+    {
+        public static void Result()
+        {
+            // Using Person class
+            var john = new Person("John", 30);
+            var johnCopy = john.DeepCopy();
+            johnCopy.Name = "Jane";
+            johnCopy.Age = 25;
+            Console.WriteLine(john);     // John, Age: 30
+            Console.WriteLine(johnCopy); // Jane, Age: 25
+
+            // Using PersonRecord
+            var recordJohn = new PersonRecord("John", 30);
+            var recordCopy = recordJohn.DeepCopy();
+            recordCopy = recordCopy with { Name = "Jane", Age = 25 };
+            Console.WriteLine(recordJohn); // PersonRecord { Name = John, Age = 30 }
+            Console.WriteLine(recordCopy); // PersonRecord { Name = Jane, Age = 25 }
+        }
+    }
+}
