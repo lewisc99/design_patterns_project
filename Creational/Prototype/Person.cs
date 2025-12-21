@@ -1,4 +1,5 @@
 ﻿using Centralized;
+using System.Runtime.CompilerServices;
 
 namespace Centralized
 {
@@ -149,15 +150,36 @@ namespace CopyConstruction
 
 namespace DeepCopying
 {
-    public interface IDeepCopyable<out T>
+
+    public static class Extension
     {
-        T DeepCopy();
+        public static T DeepCopy<T>(this IDeepCopyable<T> item)
+      where T : new()
+        {
+            return item.DeepCopy();
+        }
+    }
+
+    public interface IDeepCopyable<T> where T : new()
+    {
+        void CopyTo(T target);
+
+        public T DeepCopy()
+        {
+            T t = new T();
+            CopyTo(t);
+            return t;
+        }
     }
 
     public class Address : IDeepCopyable<Address>
     {
-        public string StreetName { get; }
-        public int HouseNumber { get; }
+        public string StreetName { get; set; }
+        public int HouseNumber { get; set; }
+
+        public Address()
+        {
+        }
 
         public Address(string streetName, int houseNumber)
         {
@@ -171,16 +193,31 @@ namespace DeepCopying
             HouseNumber = other.HouseNumber;
         }
 
-        public Address DeepCopy()
+        public void CopyTo(Address target)
         {
-            return new Address(this);
+            target.StreetName = StreetName;
+            target.HouseNumber = HouseNumber;
+        }
+
+        //public Address DeepCopy()
+        //{
+        //    return new Address(this);
+        //}
+
+        public override string ToString()
+        {
+            return $"{nameof(StreetName)}: {StreetName}, {nameof(HouseNumber)}: {HouseNumber}";
         }
     }
 
     public class Person : IDeepCopyable<Person>
     {
-        public string[] Names { get; }
-        public Address Address { get; }
+        public string[] Names { get; set; }
+        public Address Address { get; set; }
+
+        public Person()
+        {
+        }
 
         public Person(string[] names, Address address)
         {
@@ -195,20 +232,40 @@ namespace DeepCopying
             Address = other.Address.DeepCopy();
         }
 
-        public virtual Person DeepCopy()
+        //public virtual Person DeepCopy()
+        //{
+        //    return new Person(this);
+        //}
+
+        public void CopyTo(Person target)
         {
-            return new Person(this);
+            target.Names = (string[])Names.Clone();
+            target.Address = Address.DeepCopy();
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(Names)}: {string.Join(",", Names)}, {nameof(Address)}: {Address}";
         }
     }
 
-    public class Employee : Person
+    public class Employee : Person, IDeepCopyable<Employee>
     {
-        public int Salary { get; }
+        public int Salary { get; set; }
 
-        public Employee(string[] names, Address address, int salary)
-            : base(names, address)
+        public void CopyTo(Employee target)
         {
-            Salary = salary;
+            base.CopyTo(target);
+            target.Salary = Salary;
+        }
+
+        //public override Person DeepCopy()
+        //{
+        //    return new Employee(this);
+        //}
+        public override string ToString()
+        {
+            return $"{base.ToString()}, {nameof(Salary)}: {Salary}";
         }
     }
 
@@ -216,13 +273,33 @@ namespace DeepCopying
     {
         public void Result()
         {
-            var john = new Employee(
-                new[] { "John", "Smith" },
-                new Address("London Road", 123),
-                10000);
+            //var john = new Employee(
+            //    new[] { "John", "Smith" },
+            //    new Address("London Road", 123),
+            //    10000);
 
-            Person copy = john.DeepCopy();
-            Console.WriteLine(copy is Employee); // false
+            //Person copy = john.DeepCopy();
+            //Console.WriteLine(copy is Employee); // false
+        }
+
+        public void Result02()
+        {
+            var john = new Employee();
+            john.Names = new[] { "John", "Doe" };
+            john.Address = new Address { HouseNumber = 123, StreetName = "London Road" };
+            john.Salary = 321000;
+            var copy = john.DeepCopy<Employee>();
+
+            copy.Names[1] = "Smith";
+            copy.Address.HouseNumber++;
+            copy.Salary = 123000;
+
+            Console.WriteLine(john);
+            Console.WriteLine(copy);
+
+
+            copy.Address = john.Address.DeepCopy();
+            Console.WriteLine(copy);
         }
     }
 }
