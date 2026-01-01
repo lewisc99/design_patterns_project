@@ -1,5 +1,8 @@
 ﻿using Centralized;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text.Json;
+using System.Xml.Serialization;
 
 namespace Centralized
 {
@@ -467,7 +470,7 @@ namespace ArrayDeepCopy
 
 }
 
-namespace MemberwiseCloneIsNotTerrible
+namespace MemberwiseDeepCopy
 {
     public interface IDeepCopyable<T>
     {
@@ -535,4 +538,87 @@ namespace MemberwiseCloneIsNotTerrible
             Console.WriteLine(recordCopy); // PersonRecord { Name = Jane, Age = 25 }
         }
     }
+}
+
+namespace Serialization
+{
+    public static class MappingExtensions
+    {
+        public static T? DeepCopy<T>(this T self)
+        {
+            // Use the fully qualified object.ReferenceEquals to avoid context errors
+            if (object.ReferenceEquals(self, null))
+                return default;
+
+            // Serialize the object to JSON and back to create a new instance
+            // This is the .NET 8 standard replacement for BinaryFormatter
+            var json = JsonSerializer.Serialize(self);
+            return JsonSerializer.Deserialize<T>(json);
+        }
+
+        public static T DeepCopyXml<T>(this T self)
+        {
+            using var ms = new MemoryStream();
+            XmlSerializer s = new XmlSerializer(typeof(T));
+            s.Serialize(ms, self);
+            ms.Position = 0;
+            return (T) s.Deserialize(ms);
+        }
+    }
+
+
+    public class Foo
+    {
+        public uint Stuff { get; set; }
+        public Bar Whatever { get; set; }
+
+        public override string ToString()
+        {
+            return $"{nameof(Stuff)}: {Stuff}, {nameof(Whatever)}: {Whatever}";
+        }
+    }
+
+    public class Bar
+    {
+        public string Baz { get; set; }
+
+        public override string ToString()
+        {
+            return $"{nameof(Baz)}: {Baz}";
+        }
+
+    }
+
+    public class SerializationResult
+    {
+        public void Result()
+        {
+            var foo = new Foo { Stuff = 42, Whatever = new Bar { Baz = "abc" } };
+            var foo2 = foo.DeepCopy();
+            var foo3 = foo;
+
+            Console.WriteLine(foo);
+
+            foo2.Whatever.Baz = "xyz";
+
+            Console.WriteLine(foo);
+            Console.WriteLine(foo2);
+
+            Console.WriteLine(Object.ReferenceEquals(foo, foo2)); // False.
+            Console.WriteLine(Object.ReferenceEquals(foo, foo3)); // True.
+        }
+
+        public void Result02()
+        {
+            Foo foo = new() { Stuff = 42, Whatever = new Bar { Baz = "abc" } };
+
+            //Foo foo2 = foo.DeepCopy(); // crashes without [Serializable]
+            Foo foo2 = foo.DeepCopyXml();
+
+            foo2.Whatever.Baz = "xyz";
+            Console.WriteLine(foo);
+            Console.WriteLine(foo2);
+        }
+    }
+
 }

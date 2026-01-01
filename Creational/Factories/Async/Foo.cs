@@ -2,6 +2,9 @@
 /// <summary>
 /// Asynchronous Factory Method
 /// </summary>
+/// 
+
+namespace FactoryFoo;
 public class Foo
 {
 
