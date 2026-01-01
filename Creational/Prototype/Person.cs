@@ -610,6 +610,7 @@ namespace Serialization
 
         public void Result02()
         {
+
             Foo foo = new() { Stuff = 42, Whatever = new Bar { Baz = "abc" } };
 
             //Foo foo2 = foo.DeepCopy(); // crashes without [Serializable]
@@ -621,4 +622,40 @@ namespace Serialization
         }
     }
 
+}
+
+namespace PrototypeFactory
+{
+    using DeepCopying;
+
+    public class EmployeeFactory
+    {
+        private static Person main =
+          new Person(new[] { "" }, new Address("East Dr", 123));
+        private static Person aux =
+          new Person(new[] {""} , new Address("East Dr Texas", 123));
+        public static Person NewMainOfficeEmployee(string[] name, int houseNumber) =>
+          NewEmployee(main, name, houseNumber);
+        public static Person NewAuxOfficeEmployee(string[] name, int houseNumber) =>
+          NewEmployee(aux, name, houseNumber);
+
+        private static Person NewEmployee(Person proto, string[] name, int houseNumber)
+        {
+            var copy = proto.DeepCopy();
+            copy.Names = name;
+            copy.Address.HouseNumber = houseNumber;
+            return copy;
+        }
+    }
+
+    public class EmployeeFactoryResult
+    {
+        public void Result() {
+            var john = EmployeeFactory.NewMainOfficeEmployee(new[] { "John doe" }, 100);
+            var jane = EmployeeFactory.NewAuxOfficeEmployee(new[] { "Jane Smith" }, 123);
+
+            Console.WriteLine(john);
+            Console.WriteLine(jane);
+        }
+    }
 }
