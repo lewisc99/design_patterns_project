@@ -1,7 +1,4 @@
-﻿using SingletonByConvention;
-using System;
-
-namespace SingletonByConvention
+﻿namespace SingletonByConvention
 {
     public class Database
     {
@@ -66,6 +63,33 @@ namespace HidingConstructor
 
             // show an error
             //Database database1 = new Database();
+        }
+    }
+}
+
+namespace LazyLoading
+{
+    public class MyDatabase
+    {
+        private MyDatabase()
+        {
+            Console.WriteLine("Initializing database");
+        }
+
+        private static Lazy<MyDatabase> instance = new(() => new MyDatabase());
+        public static MyDatabase Instance => instance.Value;
+    }
+
+    public class LazyLoadingResult
+    {
+        public void Result()
+        {
+            // The database is NOT created yet.
+
+            var db1 = MyDatabase.Instance; // Prints: "Initializing database"
+            var db2 = MyDatabase.Instance; // Does NOT print anything. Returns the same object.
+
+            bool areSame = (db1 == db2);   // True. They are the same instance.
         }
     }
 }
