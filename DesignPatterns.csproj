@@ -11,4 +11,10 @@
     <Folder Include="Creational\Prototype\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Creational\Singleton\capitals.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

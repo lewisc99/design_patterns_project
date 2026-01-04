@@ -139,3 +139,89 @@ namespace LazyReusableBaseClass
         }
     }
 }
+
+namespace TroubleWithSngleton
+{
+    public interface IDatabase
+    {
+        int GetPopulation(string name);
+    }
+
+    public class SingletonDatabase : IDatabase
+    {
+        private Dictionary<string, int> capitals;
+
+        private SingletonDatabase()
+        {
+            Console.WriteLine("Initializing database");
+            var lines = File.ReadAllLines(
+                Path.Combine(
+                    Path.GetDirectoryName(typeof(IDatabase).Assembly.Location) ?? string.Empty,
+                    "Creational/Singleton/capitals.txt")
+                );
+
+            capitals = new Dictionary<string, int>();
+            for (int i = 0; i < lines.Length; i += 2)
+            {
+                var city = lines[i].Trim();
+                var population = int.Parse(lines[i + 1]);
+                capitals[city] = population;
+            }
+        }
+
+        public int GetPopulation(string name)
+        {
+            return capitals[name]; 
+        }
+
+        private static Lazy<SingletonDatabase> instance =
+            new Lazy<SingletonDatabase>(() =>
+            {
+                return new SingletonDatabase();
+            });
+
+        public static IDatabase Instance => instance.Value;
+    }
+
+
+    /// <summary>
+    /// The trouble is that SingletonRecordFinder is now firmly dependent on SingletonDatabase. This presents an issue for testing – if we want to check that SingletonRecordFinder works correctly, we need to use data from the actual database, that is:
+    /// </summary>
+    public class SingletonRecordFinder
+    {
+        public int TotalPopulation(IEnumerable<string> names)
+        {
+            int result = 0;
+            foreach (var name in names)
+                result += SingletonDatabase.Instance.GetPopulation(name);
+            return result;
+        }
+    }
+
+    public class SingletonRecordFinderResult
+    {
+        /// <summary>
+        /// This is a terrible unit test. It tries to read a live database (something that you typically don’t want to do too often), but it’s also very fragile, because it depends on the concrete values in the database. What if the population of Seoul changes (as a result of North Korea opening its borders, perhaps)? Then the test will break. But of course, many people run tests on continuous integration systems that are isolated from live databases, so that fact makes the approach even more dubious.
+        /// 
+        /// This test is also bad for ideological reasons. Remember, we want a unit test where the unit we’re testing is the SingletonRecordFinder. However, the test we wrote is not a unit test but an integration test because the record finder uses SingletonDatabase, so in effect we’re testing both systems at the same time. Nothing wrong with that if an integration test is what you wanted, but we would really prefer to test the record finder in isolation.
+        /// </summary>
+
+        public void Result()
+        {
+            // testing on a live database
+            var rf = new SingletonRecordFinder();
+            var names = new[] { "Seoul", "Mexico City" };
+            int tp = rf.TotalPopulation(names);
+
+            int expected = 17500000 + 17400000;
+            if (tp == expected)
+            {
+                Console.WriteLine($"Test passed: {tp} == {expected}");
+            }
+            else
+            {
+                Console.WriteLine($"Test failed: {tp} != {expected}");
+            }
+        }
+    }
+}
