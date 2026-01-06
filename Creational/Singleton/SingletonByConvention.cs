@@ -198,6 +198,36 @@ namespace TroubleWithSngleton
         }
     }
 
+    public class ConfigurableRecordFinder
+    {
+        private IDatabase database;
+
+        public ConfigurableRecordFinder(IDatabase database)
+        {
+            this.database = database;
+        }
+
+        public int GetTotalPopulation(IEnumerable<string> names)
+        {
+            int result = 0;
+            foreach (var name in names)
+                result += database.GetPopulation(name);
+            return result;
+        }
+    }
+
+    public class DummyDatabase : IDatabase
+    {
+        public int GetPopulation(string name)
+        {
+            return new Dictionary<string, int>
+            {
+                ["alpha"] = 1,
+                ["beta"] = 2,
+                ["gamma"] = 3
+            }[name];
+        }
+    }
     public class SingletonRecordFinderResult
     {
         /// <summary>
@@ -222,6 +252,26 @@ namespace TroubleWithSngleton
             {
                 Console.WriteLine($"Test failed: {tp} != {expected}");
             }
+        }
+
+        public void Result02()
+        {
+            var db = new DummyDatabase();
+            var rf = new ConfigurableRecordFinder(db);
+
+            int expected = 4;
+
+            var population = rf.GetTotalPopulation(new[] { "alpha", "gamma" });
+
+            if (population == expected)
+            {
+                Console.WriteLine($"Test passed: {population} == {expected}");
+            }
+            else
+            {
+                Console.WriteLine($"Test failed: {population} != {expected}");
+            }
+
         }
     }
 }
