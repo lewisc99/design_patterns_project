@@ -1,4 +1,9 @@
-﻿namespace SingletonByConvention
+﻿using Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace SingletonByConvention
 {
     public class Database
     {
@@ -272,6 +277,46 @@ namespace TroubleWithSngleton
                 Console.WriteLine($"Test failed: {population} != {expected}");
             }
 
+        }
+    }
+}
+
+namespace PerThreadSingletonClass
+{
+    ///
+    ///We’ve talked about thread safety in relation to the construction of the singleton, but what about thread safety with respect to a singleton’s own operations? It might be the case that, instead of one singleton shared between all threads in an application, you need one singleton to exist per thread.
+    ///
+
+    public sealed class PerThreadSingleton
+    {
+        private static ThreadLocal<PerThreadSingleton> threadInstance
+             = new(() => new PerThreadSingleton());
+        public int Id;
+
+        private PerThreadSingleton()
+        {
+            Id = Thread.CurrentThread.ManagedThreadId;
+        }
+
+        public static PerThreadSingleton Instance => threadInstance.Value;
+    }
+
+    public class PerThreadSingletonResult
+    {
+        public void Result()
+        {
+            var t1 = Task.Factory.StartNew(() =>
+            {
+                Console.WriteLine("t1: " + PerThreadSingleton.Instance.Id);
+            });
+
+            var t2 = Task.Factory.StartNew(() =>
+            {
+                Console.WriteLine("t2: " + PerThreadSingleton.Instance.Id);
+                Console.WriteLine("t2 again: " + PerThreadSingleton.Instance.Id);
+            });
+
+            Task.WaitAll(t1, t2);
         }
     }
 }
