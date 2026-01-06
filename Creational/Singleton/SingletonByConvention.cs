@@ -320,3 +320,82 @@ namespace PerThreadSingletonClass
         }
     }
 }
+
+
+namespace AmbientContext
+{
+    public sealed class BuildingContext : IDisposable
+    {
+        private BuildingContext() { }
+        public int Height { get; private set; }
+
+        private static readonly Stack<BuildingContext> stack = new();
+        static BuildingContext() { stack.Push(new BuildingContext()); }
+        private BuildingContext(BuildingContext other)
+        {
+            Height = other.Height;
+        }
+
+        public static BuildingContext Current => stack.Peek();
+
+        public static IDisposable WithHeight(int height)
+        {
+            var copy = new BuildingContext(Current);
+            copy.Height = height;
+
+            stack.Push(copy);
+            return copy;
+        }
+
+        public void Dispose()
+        {
+            if (stack.Count > 1) stack.Pop();
+        }
+    }
+
+    public class Wall
+    {
+        public Point Start;
+        public Point End;
+        public int Height;
+        public Wall(Point start, Point end, int? height = null)
+        {
+            Start = start;
+            End = end;
+            Height = height ?? BuildingContext.Current.Height;
+        }
+    }
+    public class Building
+    {
+        public List<Wall> Walls = new();
+    }
+
+
+    public class BuildingContextResult
+    {
+        public void Result()
+        {
+
+            var buildings = new Building();
+
+            using (BuildingContext.WithHeight(2000))
+            {
+                buildings.Walls.Add(new Wall(
+                    new Point(0, 1000), new Point(1000, 1000)));
+                using (BuildingContext.WithHeight(1000))
+                {
+                    buildings.Walls.Add(new Wall(
+                        new Point(1000, 2000), new Point(2000, 3000)));
+
+                    buildings.Walls.Add(new Wall(
+                        new Point(0, 1000), new Point(1000, 1000)));
+                }
+
+                foreach (var wall in buildings.Walls)
+                {
+                    Console.WriteLine(wall.Height);
+                }
+            }
+        }
+    }
+}
