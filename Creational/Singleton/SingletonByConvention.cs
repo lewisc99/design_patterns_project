@@ -1,7 +1,10 @@
-﻿using Serialization;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.VisualBasic;
+using Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SingletonByConvention
 {
@@ -396,6 +399,152 @@ namespace AmbientContext
                     Console.WriteLine(wall.Height);
                 }
             }
+        }
+    }
+}
+
+namespace SingletonsAndInversionOfControl
+{
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+
+    //Instead of writing static code that is hard to test, you rely on the container(like.NET's built-in Dependency Injection) to guarantee that only one instance is ever created.
+
+
+    //Real-World Scenario: A Shared Configuration Cache
+    //Imagine an application that needs to load heavy configuration settings (like feature flags or database strings) from a remote server.You only want to load this once and share it everywhere.
+
+    public interface IConfigurationCache
+    {
+        string GetValue(string Key);
+        void SetValue(string Key, string Value);
+    }
+
+    public class ConfigurationCache : IConfigurationCache
+    {
+        private readonly Dictionary<string, string> _cache = new();
+
+        public ConfigurationCache()
+        {
+            // Simulate loading data efficiently (e.g., from a file or DB)
+            Console.WriteLine("Initializing Cache (This should happen only once!)");
+
+            _cache["AppName"] = "MyRealWorldApp";
+            _cache["Version"] = "1.0.0";
+        }
+
+        public string GetValue(string key) => _cache.ContainsKey(key) ? _cache[key] : null;
+
+        public void SetValue(String key, string value) => _cache[key] = value;
+    }
+
+    public class ReportingService
+    {
+        private readonly IConfigurationCache _cache;
+
+        public ReportingService(IConfigurationCache cache)
+        {
+            _cache = cache;
+        }
+
+        public void PrintReport()
+        {
+            Console.WriteLine($"Report for: {_cache.GetValue("AppName")}");
+        }
+    }
+
+    public class AdminService
+    {
+        private readonly IConfigurationCache _cache;
+
+        public AdminService(IConfigurationCache cache)
+        {
+            _cache = cache;
+        }
+
+        public void UpdateName()
+        {
+            // This change will be visible to ReportingService too!
+            _cache.SetValue("AppName", "New Enterprise App");
+        }
+    }
+
+    public class SingletonsAndInversionOfControl
+    {
+        public void Result()
+        {
+            // --- 1. SETUP ---
+            // The value is just "args" directly in CreateApplicationBuilder just to mimic here because is a class outside Program.cs
+            var args = new string[] { };
+
+            var builder = Host.CreateApplicationBuilder(args);
+
+            // Register the Singleton (The star of the show)
+            // The container will create this ONCE and keep it alive forever.
+            builder.Services.AddSingleton<IConfigurationCache, ConfigurationCache>();
+
+            // Register the consumers
+            // We usually register these as 'Transient' (created every time they are asked for),
+            // but because they depend on the Singleton Cache, they will all share the same data.
+            builder.Services.AddTransient<ReportingService>();
+            builder.Services.AddTransient<AdminService>();
+
+            using IHost host = builder.Build();
+
+            // --- 2. EXECUTION ---
+            // We create a scope to simulate the application running and resolving services
+            using (var scope = host.Services.CreateScope())
+            {
+                var provider = scope.ServiceProvider;
+
+                // Resolve the services. The container looks at the constructor, sees it needs 
+                // IConfigurationCache, and injects the SINGLETON instance we registered.
+                var admin = provider.GetRequiredService<AdminService>();
+                var reporter = provider.GetRequiredService<ReportingService>();
+
+                Console.WriteLine("--- Initial State ---");
+                reporter.PrintReport(); // Should show default "MyRealWorldApp"
+
+                Console.WriteLine("\n--- Admin Updates the Cache ---");
+                admin.UpdateName(); // Changes value in the Singleton
+
+                Console.WriteLine("\n--- Reporting Service sees the change? ---");
+                reporter.PrintReport(); // Should show "New Enterprise App"
+            }
+
+            // To run this, ensure the console window stays open
+            Console.ReadLine();
+        }
+
+        public class MockConfigurationCache : IConfigurationCache
+        {
+            private Dictionary<string, string> _fakeStore = new();
+
+            public string GetValue(string key) => _fakeStore.ContainsKey(key) ? _fakeStore[key] : "DEFAULT_TEST_VAL";
+            public void SetValue(string key, string value) => _fakeStore[key] = value;
+        }
+
+        public void Result02()
+        {
+            Console.WriteLine("--- RUNNING MANUAL TEST ---");
+
+            // 1. ARRANGE
+            // Create the fake dependency manually
+            var fakeCache = new MockConfigurationCache();
+            // Pre-load it with test data (controlled environment)
+            fakeCache.SetValue("AppName", "TEST_ENV_01");
+
+            // 2. ACT
+            // We manually inject the fake cache. 
+            // The ReportingService doesn't know (or care) it's a fake!
+            var serviceToTest = new ReportingService(fakeCache);
+
+            // 3. ASSERT (Visual Verification)
+            Console.WriteLine("Expected: Report for: TEST_ENV_01");
+            Console.Write("Actual:   ");
+            serviceToTest.PrintReport();
+
+            Console.WriteLine("---------------------------");
         }
     }
 }
