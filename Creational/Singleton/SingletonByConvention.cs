@@ -1,6 +1,9 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using AmbientContext;
+using Microsoft.Extensions.Hosting;
 using Microsoft.VisualBasic;
 using Serialization;
+using System.Reflection;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -545,6 +548,72 @@ namespace SingletonsAndInversionOfControl
             serviceToTest.PrintReport();
 
             Console.WriteLine("---------------------------");
+        }
+    }
+}
+
+
+namespace MonostatePattern
+{
+
+    /// <summary>
+    /// Singleton: Enforces that only one instance of the class exists.
+    //    Monostate: Allows many instances to exist, but they all behave as if they are one because they share the same underlying static fields.
+
+    /// In a company, you might have a system where you need to access the CEO's details. While you might create multiple variables representing the CEO in different parts of your application, the actual CEO is always the same person. If you update the CEO's name in one place, every other reference to the CEO should reflect that change immediately.
+    /// </summary>
+    public class ChiefExecutiveOfficer
+    {
+        // Static fields: Shared by ALL instances of this class
+        private static string name;
+        private static int age;
+
+        // Public properties: Look like normal instance properties
+        public string Name
+        {
+            get => name;
+            set => name = value;
+        }
+
+        public int Age
+        {
+            get => age;
+            set => age = value;
+        }
+
+        public override string ToString()
+        {
+            return $"{Name} is {Age} years old.";
+        }
+    }
+
+    public class ChiefExecutiveOfficerResult
+    {
+        public void Result()
+        {
+            // 1. Create the first instance and set data
+            var ceo1 = new ChiefExecutiveOfficer();
+            ceo1.Name = "Steve Jobs";
+            ceo1.Age = 55;
+
+            // 2. Create a SECOND instance (looks like a totally new object)
+            var ceo2 = new ChiefExecutiveOfficer();
+
+            Console.WriteLine("--- After creating ceo2 ---");
+            Console.WriteLine($"CEO 1: {ceo1}");
+            Console.WriteLine($"CEO 2: {ceo2}"); // ceo2 already has ceo1's data!
+
+            // 3. Modify data using the SECOND instance
+            ceo2.Name = "Bill Gates";
+            ceo2.Age = 65;
+
+            Console.WriteLine("\n--- After modifying ceo2 ---");
+            // 4. CEO 1 is automatically updated because they share the same static fields
+            Console.WriteLine($"CEO 1: {ceo1}");
+            Console.WriteLine($"CEO 2: {ceo2}");
+
+            Console.WriteLine(ceo1.Equals(ceo2)); // False 
+            Console.WriteLine(ReferenceEquals(ceo1, ceo2)); // False 
         }
     }
 }
