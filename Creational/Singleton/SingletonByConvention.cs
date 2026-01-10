@@ -665,3 +665,67 @@ namespace Multiton
         }
     }
 }
+
+namespace Multiton.RealWorld
+{
+    public enum DatabaseType
+    {
+        Primary,      // Writes
+        ReadReplica   // Reads
+    }
+
+    // The Multiton Class
+    public class DatabaseManager
+    {
+        // 1. Thread-safe registry to store our named instances
+        private static readonly ConcurrentDictionary<DatabaseType, DatabaseManager> _instances = new();
+
+        public string ConnectionString { get; }
+
+        // 2. Private constructor prevents direct instantiation
+        private DatabaseManager(DatabaseType type)
+        {
+            // Simulate configuration loading
+            ConnectionString = type == DatabaseType.Primary
+                ? "Server=192.168.1.1;Database=MasterDB;"
+                : "Server=192.168.1.2;Database=ReplicaDB;";
+
+            Console.WriteLine($"[Init] Connection Pool created for {type}");
+        }
+
+        // 3. The Global Access Point
+        public static DatabaseManager Get(DatabaseType type)
+        {
+            // GetOrAdd ensures atomic creation: only one instance per key will ever be created.
+            return _instances.GetOrAdd(type, (key) => new DatabaseManager(key));
+        }
+
+        public void ExecuteQuery(string query)
+        {
+            Console.WriteLine($"Executing '{query}' on {ConnectionString}");
+        }
+    }
+
+    class MultitonRealWorld
+    {
+        static void Result()
+        {
+            // Scenario: A user writes data, then reads it back.
+
+            // 1. Get the Master for writing (Lazy initialization happens here)
+            var master = DatabaseManager.Get(DatabaseType.Primary);
+            master.ExecuteQuery("INSERT INTO Users (Name) VALUES ('John')");
+
+            // 2. Get the Replica for reading (Lazy initialization happens here)
+            var replica = DatabaseManager.Get(DatabaseType.ReadReplica);
+            replica.ExecuteQuery("SELECT * FROM Users");
+
+            // 3. Call Primary again - NO initialization happens, same instance returned
+            var masterAgain = DatabaseManager.Get(DatabaseType.Primary);
+
+            // Proof of Multiton:
+            Console.WriteLine($"Is master the same instance? {ReferenceEquals(master, masterAgain)}"); // True
+            Console.WriteLine($"Is master same as replica?   {ReferenceEquals(master, replica)}");     // False
+        }
+    }
+}
