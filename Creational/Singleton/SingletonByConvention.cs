@@ -2,9 +2,11 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.VisualBasic;
 using Serialization;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static System.Net.Mime.MediaTypeNames;
@@ -614,6 +616,52 @@ namespace MonostatePattern
 
             Console.WriteLine(ceo1.Equals(ceo2)); // False 
             Console.WriteLine(ReferenceEquals(ceo1, ceo2)); // False 
+        }
+    }
+}
+
+namespace Multiton
+{
+
+    /// <summary>
+    /// Multiton, like its name suggests, is a pattern that, instead of forcing us to have just one instance, gets us to have a finite number of named instances of some particular component. For example, suppose we have two subsystems – the main one and another for backup:
+    /// </summary>
+    enum Subystem
+    {
+        Main, 
+        Backup
+    }
+
+    class Printer
+    {
+        private Printer() { }
+
+        public static Printer Get(Subystem ss)
+        {
+            if (instances.ContainsKey(ss))
+                return instances[ss];
+
+            var instance = new Printer();
+
+            instances[ss] = instance;
+            return instance;
+        }
+
+        private static readonly Dictionary<Subystem, Printer> instances = new();
+    }
+
+    public class MultitonResult
+    {
+        public void Result()
+        {
+            var primary = Printer.Get(Subystem.Main);
+
+            var backup = Printer.Get(Subystem.Backup);
+
+            var backupAgain = Printer.Get(Subystem.Backup);
+
+
+            Console.WriteLine(ReferenceEquals(backup, backupAgain));
         }
     }
 }
