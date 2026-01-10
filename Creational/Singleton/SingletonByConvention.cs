@@ -153,6 +153,70 @@ namespace LazyReusableBaseClass
     }
 }
 
+namespace LazySingleton.RealWorld
+{
+    // "sealed" prevents inheritance, which is safer for Singletons
+    public sealed class AppConfiguration
+    {
+        // 1. THE LAZY WRAPPER
+        // This static field holds the "recipe" to create the instance.
+        // It promises: "I will call the constructor only once, the first time .Value is accessed."
+        // It is inherently thread-safe.
+
+        // Thread Safety: Lazy<T> automatically handles locks. If two threads hit AppConfiguration.Instance at the exact same millisecond, .NET guarantees the constructor runs only once.
+
+        private static readonly Lazy<AppConfiguration> _lazyInstance =
+            new Lazy<AppConfiguration>(() => new AppConfiguration());
+
+        // 2. PUBLIC ACCESS POINT
+        // We just return the .Value. If it's the first time, it runs the constructor.
+        // If it's the 2nd/3rd time, it returns the cached object immediately.
+        public static AppConfiguration Instance => _lazyInstance.Value;
+
+        // Public properties that we want to share
+        public string AppName { get; private set; }
+        public DateTime LoadedAt { get; private set; }
+
+        // 3. PRIVATE CONSTRUCTOR
+        // This is where the "Heavy" work happens.
+        private AppConfiguration()
+        {
+            Console.WriteLine("--- [Constructor] Starting heavy configuration load... ---");
+
+            // Simulate reading a large file from disk
+            Thread.Sleep(2000);
+
+            AppName = "MySuperEnterpriseApp";
+            LoadedAt = DateTime.Now;
+
+            Console.WriteLine("--- [Constructor] Config loaded successfully! ---");
+        }
+    }
+
+    class LazySingletonRealWorld
+    {
+        static void Result()
+        {
+            Console.WriteLine("App Started. (Config not loaded yet)");
+
+            // ... Application runs some other logic ...
+            Console.WriteLine("Doing other work...");
+
+            Console.WriteLine("\nAccessing Singleton for the 1st time:");
+            // 4. TRIGGER
+            // The constructor runs HERE, not at the start of the app.
+            var config = AppConfiguration.Instance;
+            Console.WriteLine($"Current App: {config.AppName}");
+
+            Console.WriteLine("\nAccessing Singleton for the 2nd time:");
+            // 5. CACHED
+            // No constructor output. Instant access.
+            var config2 = AppConfiguration.Instance;
+            Console.WriteLine($"Loaded at: {config2.LoadedAt}");
+        }
+    }
+}
+
 namespace TroubleWithSngleton
 {
     public interface IDatabase
@@ -328,7 +392,6 @@ namespace PerThreadSingletonClass
         }
     }
 }
-
 
 namespace AmbientContext
 {
