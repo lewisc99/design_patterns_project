@@ -1,1 +1,2 @@
-﻿
+﻿using DesignPatterns.Solid.LSP;
+
